@@ -1,78 +1,87 @@
 import { useEffect, useState } from "react"
-import axios from "axios"
+import api from "../../../services/api"
+
+interface Job {
+  id: number
+  title: string
+  location: string
+  salary?: number
+}
+
+interface Application {
+  id: number
+  status: string
+}
+
+interface Stats {
+  available: number
+  applied: number
+  pending: number
+  accepted: number
+}
 
 const JobSeekerDashboard = () => {
 
-  const [stats,setStats] = useState({
-    available:0,
-    applied:0,
-    pending:0,
-    accepted:0
+  const [stats, setStats] = useState<Stats>({
+    available: 0,
+    applied: 0,
+    pending: 0,
+    accepted: 0
   })
 
-  const [latestJobs,setLatestJobs] = useState<any[]>([])
+  const [latestJobs, setLatestJobs] = useState<Job[]>([])
+  const [loading, setLoading] = useState(false)
 
-  const token = localStorage.getItem("token")
+  const fetchDashboard = async () => {
+    try {
+      setLoading(true)
 
-const fetchDashboard = async () => {
-  try {
+      const [jobsRes, appRes] = await Promise.all([
+        api.get("/jobs/"),
+        api.get("/applications/jobseeker/")
+      ])
 
-    const jobsRes = await axios.get(
-  "http://127.0.0.1:8000/api/jobs/",
-  {
-    headers:{
-      Authorization: `Bearer ${token}`
+      const jobs = jobsRes.data.results || jobsRes.data
+      const applications = appRes.data.results || appRes.data
+
+      const pending = applications.filter(
+        (a: Application) => a.status.toLowerCase() === "pending"
+      ).length
+
+      const accepted = applications.filter(
+        (a: Application) => a.status.toLowerCase() === "accepted"
+      ).length
+
+      setStats({
+        available: jobs.length,
+        applied: applications.length,
+        pending,
+        accepted
+      })
+
+      setLatestJobs(jobs.slice(0, 5))
+
+    } catch (error) {
+      console.error("Dashboard error:", error)
+    } finally {
+      setLoading(false)
     }
   }
-)
 
-    const appRes = await axios.get(
-      "http://127.0.0.1:8000/api/applications/jobseeker/",
-      {
-        headers:{
-          Authorization:`Bearer ${token}`
-        }
-      }
-    )
-
-    const jobs = jobsRes.data.results || jobsRes.data
-    const applications = appRes.data.results || appRes.data
-
-    const pending = applications.filter(
-      (a:any)=>a.status.toLowerCase() === "pending"
-    ).length
-
-    const accepted = applications.filter(
-      (a:any)=>a.status.toLowerCase() === "accepted"
-    ).length
-
-    setStats({
-      available: jobs.length,
-      applied: applications.length,
-      pending,
-      accepted
-    })
-
-    setLatestJobs(jobs.slice(0,5))
-
-  } catch(error){
-    console.error("Dashboard error", error)
-  }
-}
-  useEffect(()=>{
+  useEffect(() => {
     fetchDashboard()
-  },[])
+  }, [])
 
   return (
 
     <div>
 
-      {/* Title */}
+      {/* TITLE */}
       <h1 className="text-3xl font-bold text-gray-800 mb-6">
         Job Seeker Dashboard
       </h1>
 
-      {/* Stats Cards */}
+      {/* STATS */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
         <div className="bg-white p-6 rounded-lg shadow">
@@ -97,7 +106,7 @@ const fetchDashboard = async () => {
 
       </div>
 
-      {/* Latest Jobs */}
+      {/* LATEST JOBS */}
       <div className="mt-10">
 
         <h2 className="text-xl font-semibold mb-4">
@@ -106,7 +115,11 @@ const fetchDashboard = async () => {
 
         <div className="bg-white p-6 rounded shadow">
 
-          {latestJobs.length === 0 ? (
+          {loading ? (
+
+            <p className="text-blue-500">Loading...</p>
+
+          ) : latestJobs.length === 0 ? (
 
             <p className="text-gray-500">
               No jobs available right now
@@ -116,7 +129,7 @@ const fetchDashboard = async () => {
 
             <ul className="space-y-3">
 
-              {latestJobs.map((job)=>(
+              {latestJobs.map((job) => (
                 <li key={job.id} className="border-b pb-2">
 
                   <p className="font-semibold">
@@ -124,7 +137,7 @@ const fetchDashboard = async () => {
                   </p>
 
                   <p className="text-sm text-gray-500">
-                    {job.location} • ₹{job.salary}
+                    {job.location} • ₹{job.salary || "Not disclosed"}
                   </p>
 
                 </li>
@@ -139,6 +152,7 @@ const fetchDashboard = async () => {
       </div>
 
     </div>
+
   )
 }
 

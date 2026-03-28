@@ -24,12 +24,12 @@ const AppRoutes = () => {
     <BrowserRouter>
       <Routes>
 
-        {/* PUBLIC ROUTES */}
+        {/* ================= PUBLIC ================= */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* ================= JOBSEEKER ROUTES ================= */}
+        {/* ================= JOBSEEKER ================= */}
         <Route
           path="/jobseeker"
           element={
@@ -38,6 +38,7 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         >
+          <Route index element={<JobSeekerDashboard />} />
           <Route path="dashboard" element={<JobSeekerDashboard />} />
           <Route path="profile" element={<Profile />} />
           <Route path="jobs" element={<BrowseJobs />} />
@@ -45,7 +46,7 @@ const AppRoutes = () => {
           <Route path="saved-jobs" element={<SavedJobs />} />
         </Route>
 
-        {/* ================= EMPLOYER ROUTES ================= */}
+        {/* ================= EMPLOYER ================= */}
         <Route
           path="/employer"
           element={
@@ -54,6 +55,7 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         >
+          <Route index element={<EmployerDashboard />} />
           <Route path="dashboard" element={<EmployerDashboard />} />
           <Route path="profile" element={<Profile />} />
           <Route path="post-job" element={<PostJob />} />

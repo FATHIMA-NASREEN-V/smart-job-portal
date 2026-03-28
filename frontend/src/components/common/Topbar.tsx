@@ -2,41 +2,67 @@ import { useNavigate } from "react-router-dom"
 import { useAppDispatch, useAppSelector } from "../../hooks/reduxHooks"
 import { logout } from "../../features/auth/authSlice"
 import { useEffect, useRef, useState } from "react"
-import axios from "axios"
+import api from "../../services/api"
+
+interface Notification {
+  id: string | number
+  message: string
+  is_read: boolean
+  created_at?: string
+}
+
+const WS_BASE_URL =
+  import.meta.env.VITE_WS_URL || "ws://127.0.0.1:8000"
 
 const Topbar = () => {
 
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
+  const { user } = useAppSelector((state) => state.auth)
 
-  const [notifications, setNotifications] = useState<any[]>([])
+  const [notifications, setNotifications] = useState<Notification[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
 
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  const { user } = useAppSelector((state) => state.auth)
-
   const username = user?.username || "User"
   const initial = username.charAt(0).toUpperCase()
 
+  // Logout
   const handleLogout = () => {
     dispatch(logout())
-    localStorage.removeItem("token")
     navigate("/login")
   }
 
-  // ✅ WebSocket (Realtime)
+  // Fetch Notifications
+  const fetchNotifications = async () => {
+    try {
+      const res = await api.get("/notifications/")
+      setNotifications(res.data)
+    } catch (error) {
+      console.error("Fetch notifications error:", error)
+    }
+  }
+
+  useEffect(() => {
+    fetchNotifications()
+  }, [])
+
+  // WebSocket
   useEffect(() => {
     const token = localStorage.getItem("token")
+    if (!token) return
 
-    const ws = new WebSocket(`ws://127.0.0.1:8000/ws/notifications/?token=${token}`)
+    const ws = new WebSocket(
+      `${WS_BASE_URL}/ws/notifications/?token=${token}`
+    )
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data)
 
-      setNotifications(prev => [
+      setNotifications((prev) => [
         {
-          id: Date.now(), // temp id
+          id: crypto.randomUUID(),
           message: data.message,
           is_read: false,
           created_at: new Date().toISOString()
@@ -48,30 +74,13 @@ const Topbar = () => {
     return () => ws.close()
   }, [])
 
-  // ✅ Fetch old notifications
-  const fetchNotifications = async () => {
-    const token = localStorage.getItem("token")
-
-    const res = await axios.get(
-      "http://127.0.0.1:8000/api/notifications/",
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    )
-
-    setNotifications(res.data)
-  }
-
+  // Close dropdown
   useEffect(() => {
-    fetchNotifications()
-  }, [])
-
-  // ✅ Close dropdown on outside click
-  useEffect(() => {
-    const handleClickOutside = (event: any) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setShowDropdown(false)
       }
     }
@@ -80,72 +89,42 @@ const Topbar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  const unreadCount = notifications.filter(n => !n.is_read).length
+  const unreadCount = notifications.filter((n) => !n.is_read).length
 
-  // ✅ Mark single as read
-  const markAsRead = async (id: number) => {
-
-    const token = localStorage.getItem("token")
-
+  const markAsRead = async (id: string | number) => {
     try {
-      await axios.put(
-        `http://127.0.0.1:8000/api/notifications/${id}/read/`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      )
-
-      setNotifications(prev =>
-        prev.map(n =>
+      await api.put(`/notifications/${id}/read/`)
+      setNotifications((prev) =>
+        prev.map((n) =>
           n.id === id ? { ...n, is_read: true } : n
         )
       )
-
     } catch (error) {
-      console.error("Mark read error", error)
+      console.error(error)
     }
   }
 
-  // ✅ Mark all as read
   const markAllAsRead = async () => {
-
-    const token = localStorage.getItem("token")
-
     try {
-      await axios.put(
-        "http://127.0.0.1:8000/api/notifications/read-all/",
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
+      await api.put("/notifications/read-all/")
+      setNotifications((prev) =>
+        prev.map((n) => ({ ...n, is_read: true }))
       )
-
-      setNotifications(prev =>
-        prev.map(n => ({ ...n, is_read: true }))
-      )
-
     } catch (error) {
-      console.error("Mark all read error", error)
+      console.error(error)
     }
   }
 
   return (
     <div className="flex justify-between items-center bg-white px-6 py-4 shadow relative">
 
-      {/* Left */}
       <h1 className="text-xl font-semibold text-gray-700">
         Dashboard
       </h1>
 
-      {/* Right */}
       <div className="flex items-center space-x-6">
 
-        {/* 🔔 Notification */}
+        {/* Notifications */}
         <div className="relative" ref={dropdownRef}>
 
           <button
@@ -161,11 +140,9 @@ const Topbar = () => {
             )}
           </button>
 
-          {/* Dropdown */}
           {showDropdown && (
             <div className="absolute right-0 mt-3 w-96 bg-white shadow-xl rounded-xl border z-50">
 
-              {/* Header */}
               <div className="flex justify-between items-center p-4 border-b">
                 <h2 className="font-semibold text-gray-700">
                   Notifications
@@ -181,7 +158,6 @@ const Topbar = () => {
                 )}
               </div>
 
-              {/* List */}
               <div className="max-h-96 overflow-y-auto">
 
                 {notifications.length === 0 ? (
@@ -189,21 +165,21 @@ const Topbar = () => {
                     No notifications
                   </p>
                 ) : (
-                  notifications.map((n, i) => (
+                  notifications.map((n) => (
                     <div
-                      key={i}
-                      onClick={() => markAsRead(n.id)}
-                      className={`p-4 border-b cursor-pointer transition ${
+                      key={n.id}
+                      onClick={() => {
+                        markAsRead(n.id)
+                        setShowDropdown(false)
+                      }}
+                      className={`p-4 border-b cursor-pointer ${
                         !n.is_read
                           ? "bg-blue-50 hover:bg-blue-100"
                           : "hover:bg-gray-50"
                       }`}
                     >
-                      <p className="text-sm text-gray-800">
-                        {n.message}
-                      </p>
+                      <p className="text-sm">{n.message}</p>
 
-                      {/* Optional time */}
                       {n.created_at && (
                         <p className="text-xs text-gray-400 mt-1">
                           {new Date(n.created_at).toLocaleString()}
@@ -220,18 +196,15 @@ const Topbar = () => {
 
         </div>
 
-        {/* 👤 User */}
+        {/* User */}
         <div className="flex items-center space-x-2">
           <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
             {initial}
           </div>
-
-          <span className="text-gray-700 text-sm font-medium">
-            {username}
-          </span>
+          <span className="text-sm font-medium">{username}</span>
         </div>
 
-        {/* 🚪 Logout */}
+        {/* Logout */}
         <button
           onClick={handleLogout}
           className="bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded text-sm"

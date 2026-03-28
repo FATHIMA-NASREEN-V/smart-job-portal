@@ -1,79 +1,98 @@
 import { useEffect, useState } from "react"
-import axios from "axios"
+import api from "../../../services/api"
+
+interface Job {
+  id: number
+  title: string
+  location: string
+  salary?: number
+  status?: string
+}
+
+interface Application {
+  id: number
+  status: string
+}
+
+interface Stats {
+  totalJobs: number
+  totalApplications: number
+  accepted: number
+  pending: number
+}
 
 const EmployerDashboard = () => {
 
-  const token = localStorage.getItem("token")
-
-  const [stats,setStats] = useState({
-    totalJobs:0,
-    totalApplications:0,
-    accepted:0,
-    pending:0
+  const [stats, setStats] = useState<Stats>({
+    totalJobs: 0,
+    totalApplications: 0,
+    accepted: 0,
+    pending: 0
   })
 
-  const [recentJobs,setRecentJobs] = useState<any[]>([])
+  const [recentJobs, setRecentJobs] = useState<Job[]>([])
+  const [loading, setLoading] = useState(false)
 
   const fetchDashboardData = async () => {
-
     try {
+      setLoading(true)
 
-      const jobsRes = await axios.get(
-        "http://127.0.0.1:8000/api/jobs/",
-        {
-          headers:{ Authorization:`Bearer ${token}` }
-        }
-      )
+      const [jobsRes, appsRes] = await Promise.all([
+        api.get("/jobs/"),
+        api.get("/applications/employer/")
+      ])
 
-      const appsRes = await axios.get(
-        "http://127.0.0.1:8000/api/applications/employer/",
-        {
-          headers:{ Authorization:`Bearer ${token}` }
-        }
-      )
+      const jobs = jobsRes.data?.results || jobsRes.data
+      const applications = appsRes.data?.results || appsRes.data
 
-      const jobs = jobsRes.data
-      const applications = appsRes.data
+      const accepted = applications.filter(
+        (a: Application) => a.status === "accepted"
+      ).length
+
+      const pending = applications.filter(
+        (a: Application) => a.status === "pending"
+      ).length
 
       setStats({
         totalJobs: jobs.length,
         totalApplications: applications.length,
-        accepted: applications.filter((a:any)=>a.status==="accepted").length,
-        pending: applications.filter((a:any)=>a.status==="pending").length
+        accepted,
+        pending
       })
 
-      setRecentJobs(jobs.slice(0,5))
+      setRecentJobs(jobs.slice(0, 5))
 
     } catch (error) {
-      console.error("Dashboard data error",error)
+      console.error("Dashboard data error:", error)
+    } finally {
+      setLoading(false)
     }
-
   }
 
-  useEffect(()=>{
+  useEffect(() => {
     fetchDashboardData()
-  },[])
+  }, [])
 
   const statsCards = [
-    {title:"Total Jobs",value:stats.totalJobs},
-    {title:"Applications",value:stats.totalApplications},
-    {title:"Accepted",value:stats.accepted},
-    {title:"Pending",value:stats.pending}
+    { title: "Total Jobs", value: stats.totalJobs },
+    { title: "Applications", value: stats.totalApplications },
+    { title: "Accepted", value: stats.accepted },
+    { title: "Pending", value: stats.pending }
   ]
 
   return (
 
     <div>
 
-      {/* Title */}
+      {/* TITLE */}
       <h1 className="text-3xl font-bold text-gray-800 mb-6">
         Employer Dashboard
       </h1>
 
-      {/* Stats */}
+      {/* STATS */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
-        {statsCards.map((item,index)=>(
+        {statsCards.map((item, index) => (
 
           <div
             key={index}
@@ -94,9 +113,7 @@ const EmployerDashboard = () => {
 
       </div>
 
-
-      {/* Recent Jobs */}
-
+      {/* RECENT JOBS */}
       <div className="mt-10">
 
         <h2 className="text-xl font-semibold mb-4">
@@ -105,7 +122,11 @@ const EmployerDashboard = () => {
 
         <div className="bg-white rounded shadow">
 
-          {recentJobs.length === 0 ? (
+          {loading ? (
+
+            <p className="p-6 text-blue-500">Loading...</p>
+
+          ) : recentJobs.length === 0 ? (
 
             <p className="p-6 text-gray-500">
               No jobs posted yet
@@ -126,14 +147,18 @@ const EmployerDashboard = () => {
 
               <tbody>
 
-                {recentJobs.map((job)=>(
+                {recentJobs.map((job) => (
 
                   <tr key={job.id} className="border-t">
 
                     <td className="p-3">{job.title}</td>
                     <td className="p-3">{job.location}</td>
-                    <td className="p-3">₹{job.salary}</td>
-                    <td className="p-3">{job.status}</td>
+                    <td className="p-3">
+                      ₹{job.salary || "Not disclosed"}
+                    </td>
+                    <td className="p-3">
+                      {job.status || "Active"}
+                    </td>
 
                   </tr>
 

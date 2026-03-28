@@ -2,11 +2,21 @@ import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { registerUser } from "../../../services/authService"
 
+
+interface RegisterForm {
+  username: string
+  email: string
+  password: string
+  first_name: string
+  last_name: string
+  role: "jobseeker" | "employer" 
+}
+
 const Register = () => {
 
   const navigate = useNavigate()
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<RegisterForm>({
     username: "",
     email: "",
     password: "",
@@ -18,34 +28,41 @@ const Register = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value
-    })
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: value
+    }))
   }
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    setLoading(true)
-    setError("")
-
     try {
+      setLoading(true)
+      setError("")
+
       await registerUser(form)
 
       alert("Registration successful ✅")
       navigate("/login")
 
-    } catch (error: any) {
+    } catch (err: any) {
+      console.error("Register error:", err)
 
-      console.log("Register error:", error?.response?.data)
+      const data = err?.response?.data
 
-      // Show proper backend error
-      if (error?.response?.data) {
-        const errData = error.response.data
-        const firstError = Object.values(errData)[0]
-        setError(Array.isArray(firstError) ? firstError[0] : "Registration failed")
+      if (data) {
+        const firstError = Object.values(data)[0]
+        setError(
+          Array.isArray(firstError)
+            ? firstError[0]
+            : "Registration failed"
+        )
       } else {
         setError("Something went wrong ❌")
       }
@@ -69,13 +86,14 @@ const Register = () => {
         </h2>
 
         {error && (
-          <p className="text-red-500 text-sm mb-3">
+          <p className="text-red-500 text-sm mb-3 text-center">
             {error}
           </p>
         )}
 
         <input
           name="username"
+          value={form.username}
           placeholder="Username"
           className="w-full p-3 border rounded mb-4"
           onChange={handleChange}
@@ -85,6 +103,7 @@ const Register = () => {
         <input
           type="email"
           name="email"
+          value={form.email}
           placeholder="Email"
           className="w-full p-3 border rounded mb-4"
           onChange={handleChange}
@@ -93,6 +112,7 @@ const Register = () => {
 
         <input
           name="first_name"
+          value={form.first_name}
           placeholder="First Name"
           className="w-full p-3 border rounded mb-4"
           onChange={handleChange}
@@ -100,6 +120,7 @@ const Register = () => {
 
         <input
           name="last_name"
+          value={form.last_name}
           placeholder="Last Name"
           className="w-full p-3 border rounded mb-4"
           onChange={handleChange}
@@ -108,6 +129,7 @@ const Register = () => {
         <input
           type="password"
           name="password"
+          value={form.password}
           placeholder="Password"
           className="w-full p-3 border rounded mb-4"
           onChange={handleChange}
@@ -116,6 +138,7 @@ const Register = () => {
 
         <select
           name="role"
+          value={form.role}
           className="w-full p-3 border rounded mb-4"
           onChange={handleChange}
         >
@@ -126,12 +149,12 @@ const Register = () => {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-blue-600 text-white p-3 rounded hover:bg-blue-700 disabled:bg-gray-400"
+          className="w-full bg-blue-600 text-white p-3 rounded hover:bg-blue-700 disabled:opacity-50"
         >
           {loading ? "Registering..." : "Register"}
         </button>
 
-        <p className="text-center mt-4">
+        <p className="text-center mt-4 text-sm">
           Already have an account?
           <Link to="/login" className="text-blue-600 ml-1">
             Login

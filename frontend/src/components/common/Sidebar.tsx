@@ -1,112 +1,83 @@
-import { Link } from "react-router-dom"
+import { NavLink } from "react-router-dom"
 
 interface SidebarProps {
-  role: string
+  role: "employer" | "jobseeker"
+  isOpen?: boolean
+  toggle?: () => void
 }
 
-const Sidebar = ({ role }: SidebarProps) => {
+interface MenuItem {
+  label: string
+  path: string
+}
+
+const Sidebar = ({ role, isOpen = true, toggle }: SidebarProps) => {
+
+  const employerMenu: MenuItem[] = [
+    { label: "Dashboard", path: "/employer/dashboard" },
+    { label: "Post Job", path: "/employer/post-job" },
+    { label: "My Jobs", path: "/employer/jobs" },
+    { label: "Applications", path: "/employer/applications" },
+    { label: "Profile", path: "/employer/profile" }
+  ]
+
+  const jobseekerMenu: MenuItem[] = [
+    { label: "Dashboard", path: "/jobseeker/dashboard" },
+    { label: "Browse Jobs", path: "/jobseeker/jobs" },
+    { label: "Applied Jobs", path: "/jobseeker/applied" },
+    { label: "Saved Jobs", path: "/jobseeker/saved-jobs" },
+    { label: "Profile", path: "/jobseeker/profile" }
+  ]
+
+  const menu = role === "employer" ? employerMenu : jobseekerMenu
 
   return (
+    <aside
+      className={`bg-slate-900 text-white min-h-screen p-4 transition-all duration-300 flex flex-col
+      ${isOpen ? "w-64" : "w-20"}`}
+    >
 
-    <div className="w-64 min-h-screen bg-slate-900 text-white flex flex-col p-6">
+      {/* Top Section */}
+      <div className="flex items-center justify-between mb-8">
 
-      {/* Logo */}
+        <h2 className="text-xl font-bold text-blue-400">
+          {isOpen ? "Smart Job Portal" : "SJP"}
+        </h2>
 
-      <h2 className="text-2xl font-bold mb-10 text-blue-400">
-        Smart Job Portal
-      </h2>
-
-
-      {/* Employer Menu */}
-
-      {role === "employer" && (
-        <nav className="flex flex-col space-y-4">
-
-          <Link
-            to="/employer/dashboard"
-            className="hover:bg-slate-700 p-2 rounded"
+        {toggle && (
+          <button
+            onClick={toggle}
+            className="text-gray-400 hover:text-white"
           >
-            Dashboard
-          </Link>
+            {isOpen ? "⬅" : "➡"}
+          </button>
+        )}
 
-          <Link
-            to="/employer/post-job"
-            className="hover:bg-slate-700 p-2 rounded"
+      </div>
+
+      {/* Menu */}
+      <nav className="flex flex-col space-y-2">
+
+        {menu.map((item) => (
+          <NavLink
+            key={item.path}
+            to={item.path}
+            title={!isOpen ? item.label : ""}
+            className={({ isActive }) =>
+              `p-2 rounded transition ${
+                isActive
+                  ? "bg-blue-600 text-white"
+                  : "hover:bg-slate-700 text-gray-300"
+              }`
+            }
           >
-            Post Job
-          </Link>
+            {isOpen ? item.label : item.label.charAt(0)}
+          </NavLink>
+        ))}
 
-          <Link
-            to="/employer/jobs"
-            className="hover:bg-slate-700 p-2 rounded"
-          >
-            My Jobs
-          </Link>
+      </nav>
 
-          <Link
-            to="/employer/applications"
-            className="hover:bg-slate-700 p-2 rounded"
-          >
-            Applications
-          </Link>
-
-          <Link
-            to="/employer/profile"
-            className="hover:bg-slate-700 p-2 rounded"
-          >
-            Profile
-          </Link>
-
-
-        </nav>
-      )}
-
-
-      {/* Jobseeker Menu */}
-
-      {role === "jobseeker" && (
-        <nav className="flex flex-col space-y-4">
-
-          <Link
-            to="/jobseeker/dashboard"
-            className="hover:bg-slate-700 p-2 rounded"
-          >
-            Dashboard
-          </Link>
-
-          <Link
-            to="/jobseeker/jobs"
-            className="hover:bg-slate-700 p-2 rounded"
-          >
-            Browse Jobs
-          </Link>
-
-          <Link
-            to="/jobseeker/applied"
-            className="hover:bg-slate-700 p-2 rounded"
-          >
-            Applied Jobs
-          </Link>
-
-          <Link 
-          to="/jobseeker/saved-jobs"
-          className="hover:bg-slate-700 p-2 rounded"
-          >
-            Saved Jobs
-
-          </Link>
-
-          <Link
-            to="/jobseeker/profile"
-            className="hover:bg-slate-700 p-2 rounded"
-          >
-            Profile
-          </Link>
-
-        </nav>
-      )}
-
-    </div>
+    </aside>
   )
 }
 

@@ -1,45 +1,51 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit"
 
 interface User {
-  username:string
-  role:string
+  username: string
+  role: string
 }
 
 interface AuthState {
-  user:User | null
-  token:string | null
+  user: User | null
+  token: string | null
 }
 
-const initialState:AuthState = {
-  user:null,
-  token:null
+// ✅ Load token from localStorage (persist login)
+const tokenFromStorage = localStorage.getItem("token")
+
+const initialState: AuthState = {
+  user: null,
+  token: tokenFromStorage
 }
 
 const authSlice = createSlice({
-  name:"auth",
+  name: "auth",
   initialState,
 
-  reducers:{
+  reducers: {
 
-    loginSuccess(state,action:PayloadAction<AuthState>){
-
+    // ✅ cleaner payload typing
+    loginSuccess(
+      state,
+      action: PayloadAction<{ user: User; token: string }>
+    ) {
       state.user = action.payload.user
       state.token = action.payload.token
 
+      // ✅ persist token
+      localStorage.setItem("token", action.payload.token)
     },
 
-    logout(state){
-
+    logout(state) {
       state.user = null
       state.token = null
 
       localStorage.removeItem("token")
-
     }
 
   }
 
 })
 
-export const {loginSuccess,logout} = authSlice.actions
+export const { loginSuccess, logout } = authSlice.actions
 export default authSlice.reducer

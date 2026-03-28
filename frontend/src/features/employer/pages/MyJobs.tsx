@@ -1,38 +1,52 @@
 import { useEffect, useState } from "react"
-import axios from "axios"
+import api from "../../../services/api"
+
+interface Job {
+  id: number
+  title: string
+  location: string
+  salary?: number
+  job_type: string
+  status: "approved" | "pending" | "rejected" | string
+}
 
 const MyJobs = () => {
 
-  const [jobs, setJobs] = useState<any[]>([])
-
-  const token = localStorage.getItem("token")
+  const [jobs, setJobs] = useState<Job[]>([])
+  const [loading, setLoading] = useState(false)
 
   const fetchJobs = async () => {
-
     try {
+      setLoading(true)
 
-      const res = await axios.get(
-        "http://127.0.0.1:8000/api/jobs/",
-        {
-          headers:{
-            Authorization:`Bearer ${token}`
-          }
-        }
-      )
+      const res = await api.get("/jobs/")
+      const data = res.data?.results || res.data
 
-      setJobs(res.data)
+      setJobs(data)
 
     } catch (error) {
-
-      console.error("Error fetching jobs", error)
-
+      console.error("Error fetching jobs:", error)
+    } finally {
+      setLoading(false)
     }
-
   }
 
-  useEffect(()=>{
+  useEffect(() => {
     fetchJobs()
-  },[])
+  }, [])
+
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case "approved":
+        return "bg-green-100 text-green-700"
+      case "pending":
+        return "bg-yellow-100 text-yellow-700"
+      case "rejected":
+        return "bg-red-100 text-red-700"
+      default:
+        return "bg-gray-100 text-gray-700"
+    }
+  }
 
   return (
 
@@ -44,54 +58,66 @@ const MyJobs = () => {
 
       <div className="bg-white shadow rounded overflow-hidden">
 
-        <table className="w-full">
+        {loading ? (
 
-          <thead className="bg-gray-100">
+          <p className="p-6 text-blue-500">Loading...</p>
 
-            <tr>
-              <th className="p-3 text-left">Title</th>
-              <th className="p-3 text-left">Location</th>
-              <th className="p-3 text-left">Salary</th>
-              <th className="p-3 text-left">Type</th>
-              <th className="p-3 text-left">Status</th>
-            </tr>
+        ) : jobs.length === 0 ? (
 
-          </thead>
+          <p className="p-6 text-gray-500">
+            No jobs posted yet
+          </p>
 
-          <tbody>
+        ) : (
 
-            {jobs.map((job)=>(
-              <tr key={job.id} className="border-t">
+          <table className="w-full">
 
-                <td className="p-3 font-medium">{job.title}</td>
-                <td className="p-3">{job.location}</td>
-                <td className="p-3">₹{job.salary}</td>
-                <td className="p-3">{job.job_type}</td>
-                <td className="p-3">
-
-                  <span
-                    className={`px-2 py-1 rounded text-sm
-                      ${job.status === "approved" ? "bg-green-100 text-green-700" :
-                        job.status === "pending" ? "bg-yellow-100 text-yellow-700" :
-                        "bg-red-100 text-red-700"}
-                    `}
-                  >
-                    {job.status}
-                  </span>
-
-                </td>
-
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-3 text-left">Title</th>
+                <th className="p-3 text-left">Location</th>
+                <th className="p-3 text-left">Salary</th>
+                <th className="p-3 text-left">Type</th>
+                <th className="p-3 text-left">Status</th>
               </tr>
-            ))}
+            </thead>
 
-          </tbody>
+            <tbody>
 
-        </table>
+              {jobs.map((job) => (
+                <tr key={job.id} className="border-t">
+
+                  <td className="p-3 font-medium">{job.title}</td>
+                  <td className="p-3">{job.location}</td>
+
+                  <td className="p-3">
+                    ₹{job.salary || "Not disclosed"}
+                  </td>
+
+                  <td className="p-3">{job.job_type}</td>
+
+                  <td className="p-3">
+
+                    <span
+                      className={`px-2 py-1 rounded text-sm ${getStatusStyle(job.status)}`}
+                    >
+                      {job.status}
+                    </span>
+
+                  </td>
+
+                </tr>
+              ))}
+
+            </tbody>
+
+          </table>
+
+        )}
 
       </div>
 
     </div>
-
   )
 }
 

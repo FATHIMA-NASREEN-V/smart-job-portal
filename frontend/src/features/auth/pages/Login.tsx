@@ -9,23 +9,31 @@ const Login = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
 
-  const [username,setUsername] = useState("")
-  const [password,setPassword] = useState("")
-  const [loading,setLoading] = useState(false)
-  const [error,setError] = useState("")
+  const [form, setForm] = useState({
+    username: "",
+    password: ""
+  })
 
-  const handleLogin = async () => {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
 
     try {
-
       setLoading(true)
       setError("")
 
-      const res = await loginUser({
-        username,
-        password
-      })
-      console.log(res)
+      const res = await loginUser(form)
 
       const token = res.access
 
@@ -34,13 +42,13 @@ const Login = () => {
         role: res.role
       }
 
-      // store token
+      // ✅ store token
       localStorage.setItem("token", token)
 
-      // save to redux
+      // ✅ redux
       dispatch(loginSuccess({ user, token }))
 
-      // role based redirect
+      // ✅ redirect
       if (user.role === "employer") {
         navigate("/employer/dashboard")
       } else {
@@ -48,13 +56,10 @@ const Login = () => {
       }
 
     } catch (err: any) {
-
+      console.error("Login error:", err)
       setError("Invalid username or password")
-
     } finally {
-
       setLoading(false)
-
     }
   }
 
@@ -74,40 +79,40 @@ const Login = () => {
           </p>
         )}
 
-        <input
-          placeholder="Username"
-          className="w-full p-3 border rounded mb-4"
-          value={username}
-          onChange={(e)=>setUsername(e.target.value)}
-        />
+        <form onSubmit={handleLogin}>
 
-        <input
-          type="password"
-          placeholder="Password"
-          className="w-full p-3 border rounded mb-4"
-          value={password}
-          onChange={(e)=>setPassword(e.target.value)}
-        />
+          <input
+            name="username"
+            placeholder="Username"
+            className="w-full p-3 border rounded mb-4"
+            value={form.username}
+            onChange={handleChange}
+          />
 
-        <button
-          onClick={handleLogin}
-          disabled={loading}
-          className="w-full bg-blue-600 text-white p-3 rounded hover:bg-blue-700"
-        >
-          {loading ? "Logging in..." : "Login"}
-        </button>
+          <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            className="w-full p-3 border rounded mb-4"
+            value={form.password}
+            onChange={handleChange}
+          />
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white p-3 rounded hover:bg-blue-700 disabled:opacity-50"
+          >
+            {loading ? "Logging in..." : "Login"}
+          </button>
+
+        </form>
 
         <p className="text-center mt-4 text-sm">
-
           Don't have an account?
-
-          <Link
-            to="/register"
-            className="text-blue-600 ml-1"
-          >
+          <Link to="/register" className="text-blue-600 ml-1">
             Register
           </Link>
-
         </p>
 
       </div>

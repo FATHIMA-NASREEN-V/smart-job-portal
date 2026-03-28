@@ -1,71 +1,83 @@
 import { useEffect, useState } from "react"
-import axios from "axios"
+import api from "../../../services/api"
 import JobCard from "../../../components/jobs/Jobcard"
+
+interface Job {
+  id: number
+  title: string
+  company: string
+  location: string
+  job_type: string
+  salary?: number
+  is_saved?: boolean
+  is_applied?: boolean
+}
+
+interface SavedJob {
+  id: number
+  job: Job
+}
 
 const SavedJobs = () => {
 
-  const [savedJobs,setSavedJobs] = useState<any[]>([])
-  const [loading,setLoading] = useState(false)
-
-  const token = localStorage.getItem("token")
+  const [savedJobs, setSavedJobs] = useState<SavedJob[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
   const fetchSavedJobs = async () => {
-
-    try{
-
+    try {
       setLoading(true)
+      setError("")
 
-      const res = await axios.get(
-        "http://127.0.0.1:8000/api/jobs/my-saved/",
-        {
-          headers:{
-            Authorization:`Bearer ${token}`
-          }
-        }
-      )
+      const res = await api.get("/jobs/my-saved/")
 
-     setSavedJobs(res.data.results || res.data)
+      const data = res.data?.results || res.data
 
-    }catch(error){
-      console.error("Error fetching saved jobs",error)
-    }finally{
+      setSavedJobs(data)
+
+    } catch (err) {
+      console.error("Error fetching saved jobs:", err)
+      setError("Failed to load saved jobs")
+    } finally {
       setLoading(false)
     }
-
   }
 
-  useEffect(()=>{
+  useEffect(() => {
     fetchSavedJobs()
-  },[])
+  }, [])
 
   return (
-
     <div className="p-6">
 
       <h1 className="text-3xl font-bold mb-8">
         Saved Jobs
       </h1>
 
-      {loading ? (
+      {/* Loading */}
+      {loading && (
+        <p className="text-gray-500">Loading saved jobs...</p>
+      )}
 
-        <p>Loading...</p>
+      {/* Error */}
+      {!loading && error && (
+        <p className="text-red-500">{error}</p>
+      )}
 
-      ) : savedJobs.length === 0 ? (
-
+      {/* Empty */}
+      {!loading && !error && savedJobs.length === 0 && (
         <p className="text-gray-500">
           No saved jobs yet
         </p>
+      )}
 
-      ) : (
-
+      {/* Data */}
+      {!loading && !error && savedJobs.length > 0 && (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-
-          {savedJobs.map((item)=>(
-            <JobCard key={item.id} job={item.job}/>
+          {savedJobs.map((item) => (
+            <JobCard key={item.id} job={item.job} />
           ))}
-
         </div>
-
       )}
 
     </div>

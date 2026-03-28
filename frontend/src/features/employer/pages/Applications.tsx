@@ -1,57 +1,67 @@
 import { useEffect, useState } from "react"
-import axios from "axios"
+import api from "../../../services/api"
+
+interface Application {
+  id: number
+  job_title: string
+  applicant_username: string
+  status: "accepted" | "pending" | "rejected" | string
+}
 
 const Applications = () => {
 
-  const [applications,setApplications] = useState<any[]>([])
-  const token = localStorage.getItem("token")
+  const [applications, setApplications] = useState<Application[]>([])
+  const [loading, setLoading] = useState(false)
+  const [updatingId, setUpdatingId] = useState<number | null>(null)
 
   const fetchApplications = async () => {
-
     try {
+      setLoading(true)
 
-      const res = await axios.get(
-        "http://127.0.0.1:8000/api/applications/employer/",
-        {
-          headers:{
-            Authorization:`Bearer ${token}`
-          }
-        }
-      )
+      const res = await api.get("/applications/employer/")
+      const data = res.data?.results || res.data
 
-      setApplications(res.data)
+      setApplications(data)
 
     } catch (error) {
-      console.error("Error fetching applications",error)
+      console.error("Error fetching applications:", error)
+    } finally {
+      setLoading(false)
     }
-
   }
 
-  const updateStatus = async (id:number,status:string) => {
-
+  const updateStatus = async (id: number, status: string) => {
     try {
+      setUpdatingId(id)
 
-      await axios.patch(
-        `http://127.0.0.1:8000/api/applications/update-status/${id}/`,
-        {status},
-        {
-          headers:{
-            Authorization:`Bearer ${token}`
-          }
-        }
-      )
+      await api.patch(`/applications/update-status/${id}/`, { status })
 
-      fetchApplications()
+      // refresh list
+      await fetchApplications()
 
     } catch (error) {
-      console.error("Status update failed",error)
+      console.error("Status update failed:", error)
+    } finally {
+      setUpdatingId(null)
     }
-
   }
 
-  useEffect(()=>{
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case "accepted":
+        return "bg-green-100 text-green-700"
+      case "pending":
+        return "bg-yellow-100 text-yellow-700"
+      case "rejected":
+        return "bg-red-100 text-red-700"
+      default:
+        return "bg-gray-100 text-gray-700"
+    }
+  }
+
+  useEffect(() => {
     fetchApplications()
-  },[])
+  }, [])
 
   return (
 
@@ -63,68 +73,80 @@ const Applications = () => {
 
       <div className="bg-white shadow rounded overflow-hidden">
 
-        <table className="w-full">
+        {loading ? (
 
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="p-3 text-left">Job</th>
-              <th className="p-3 text-left">Applicant</th>
-              <th className="p-3 text-left">Status</th>
-              <th className="p-3 text-left">Actions</th>
-            </tr>
-          </thead>
+          <p className="p-6 text-blue-500">Loading...</p>
 
-          <tbody>
+        ) : applications.length === 0 ? (
 
-            {applications.map((app)=>(
-              <tr key={app.id} className="border-t">
+          <p className="p-6 text-gray-500">
+            No applications yet
+          </p>
 
-                <td className="p-3 font-medium">
-                  {app.job_title}
-                </td>
+        ) : (
 
-                <td className="p-3">
-                  {app.applicant_username}
-                </td>
+          <table className="w-full">
 
-                <td className="p-3">
-
-                  <span
-                    className={`px-2 py-1 rounded text-sm
-                    ${app.status === "accepted" ? "bg-green-100 text-green-700" :
-                      app.status === "pending" ? "bg-yellow-100 text-yellow-700" :
-                      "bg-red-100 text-red-700"}
-                    `}
-                  >
-                    {app.status}
-                  </span>
-
-                </td>
-
-                <td className="p-3 flex gap-2">
-
-                  <button
-                    onClick={()=>updateStatus(app.id,"accepted")}
-                    className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
-                  >
-                    Accept
-                  </button>
-
-                  <button
-                    onClick={()=>updateStatus(app.id,"rejected")}
-                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                  >
-                    Reject
-                  </button>
-
-                </td>
-
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-3 text-left">Job</th>
+                <th className="p-3 text-left">Applicant</th>
+                <th className="p-3 text-left">Status</th>
+                <th className="p-3 text-left">Actions</th>
               </tr>
-            ))}
+            </thead>
 
-          </tbody>
+            <tbody>
 
-        </table>
+              {applications.map((app) => (
+                <tr key={app.id} className="border-t">
+
+                  <td className="p-3 font-medium">
+                    {app.job_title}
+                  </td>
+
+                  <td className="p-3">
+                    {app.applicant_username}
+                  </td>
+
+                  <td className="p-3">
+
+                    <span
+                      className={`px-2 py-1 rounded text-sm ${getStatusStyle(app.status)}`}
+                    >
+                      {app.status}
+                    </span>
+
+                  </td>
+
+                  <td className="p-3 flex gap-2">
+
+                    <button
+                      disabled={updatingId === app.id}
+                      onClick={() => updateStatus(app.id, "accepted")}
+                      className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 disabled:opacity-50"
+                    >
+                      {updatingId === app.id ? "..." : "Accept"}
+                    </button>
+
+                    <button
+                      disabled={updatingId === app.id}
+                      onClick={() => updateStatus(app.id, "rejected")}
+                      className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 disabled:opacity-50"
+                    >
+                      {updatingId === app.id ? "..." : "Reject"}
+                    </button>
+
+                  </td>
+
+                </tr>
+              ))}
+
+            </tbody>
+
+          </table>
+
+        )}
 
       </div>
 

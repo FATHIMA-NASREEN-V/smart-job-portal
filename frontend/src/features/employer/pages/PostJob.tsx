@@ -2,11 +2,19 @@ import { useState } from "react"
 import { createJob } from "../../../services/authService"
 import { useNavigate } from "react-router-dom"
 
+interface JobForm {
+  title: string
+  description: string
+  location: string
+  salary: string
+  job_type: string
+}
+
 const PostJob = () => {
 
   const navigate = useNavigate()
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<JobForm>({
     title: "",
     description: "",
     location: "",
@@ -14,34 +22,36 @@ const PostJob = () => {
     job_type: "full_time"
   })
 
+  const [loading, setLoading] = useState(false)
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
+    const { name, value } = e.target
 
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    })
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value
+    }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     try {
+      setLoading(true)
 
       await createJob(formData)
 
       alert("Job posted successfully!")
-
       navigate("/employer/jobs")
 
     } catch (error) {
-
-      console.error(error)
+      console.error("Post job error:", error)
       alert("Failed to post job")
-
+    } finally {
+      setLoading(false)
     }
-
   }
 
   return (
@@ -60,51 +70,55 @@ const PostJob = () => {
         <input
           name="title"
           placeholder="Job Title"
-          className="w-full border p-3 rounded"
+          value={formData.title}
           onChange={handleChange}
+          className="w-full border p-3 rounded"
         />
 
         <input
           name="location"
           placeholder="Location"
-          className="w-full border p-3 rounded"
+          value={formData.location}
           onChange={handleChange}
+          className="w-full border p-3 rounded"
         />
 
         <input
           name="salary"
           placeholder="Salary"
           type="number"
-          className="w-full border p-3 rounded"
+          value={formData.salary}
           onChange={handleChange}
+          className="w-full border p-3 rounded"
         />
 
         <select
           name="job_type"
-          className="w-full border p-3 rounded"
+          value={formData.job_type}
           onChange={handleChange}
+          className="w-full border p-3 rounded"
         >
-
           <option value="full_time">Full Time</option>
           <option value="part_time">Part Time</option>
           <option value="remote">Remote</option>
           <option value="internship">Internship</option>
-
         </select>
 
         <textarea
           name="description"
           placeholder="Job Description"
           rows={5}
-          className="w-full border p-3 rounded"
+          value={formData.description}
           onChange={handleChange}
+          className="w-full border p-3 rounded"
         />
 
         <button
           type="submit"
-          className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+          disabled={loading}
+          className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
         >
-          Post Job
+          {loading ? "Posting..." : "Post Job"}
         </button>
 
       </form>
