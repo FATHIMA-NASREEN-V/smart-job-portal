@@ -26,39 +26,63 @@ const JobCard = ({ job }: Props) => {
 
   // APPLY JOB
   const applyJob = async () => {
-    try {
-      setLoadingApply(true)
+  if (applied || loadingApply) return  
 
-      await api.post("/applications/apply/", {
-        job: job.id
-      })
+  try {
+    setLoadingApply(true)
 
+    await api.post("/applications/apply/", {
+      job: job.id
+    })
+
+    setApplied(true)
+
+  } catch (error: any) {
+    const data = error.response?.data
+
+    const message =
+      Array.isArray(data) ? data[0] :
+      data?.error || data?.detail
+
+    if (message?.includes("already applied")) {
       setApplied(true)
-
-    } catch (error) {
-      console.error(error)
-    } finally {
-      setLoadingApply(false)
+    } else {
+      console.log(message)
     }
+
+  } finally {
+    setLoadingApply(false)
   }
+}
 
   // SAVE JOB
   const handleSaveJob = async () => {
-    try {
-      setLoadingSave(true)
+  if (saved || loadingSave) return
 
-      await api.post("/jobs/save/", {
-        job: job.id
-      })
+  try {
+    setLoadingSave(true)
 
+    const jobId = job?.id || job?.job?.id   
+
+    console.log("Saving job id:", jobId)
+
+    await api.post("/jobs/save/", {
+      job_id: jobId,
+    })
+
+    setSaved(true)
+
+  } catch (error: any) {
+    const data = error.response?.data
+    console.log(data)
+
+    if (data?.detail == "Job already saved") {
       setSaved(true)
-
-    } catch (error) {
-      console.error(error)
-    } finally {
-      setLoadingSave(false)
     }
+  } finally {
+    setLoadingSave(false)
   }
+}
 
   return (
 
@@ -95,15 +119,16 @@ const JobCard = ({ job }: Props) => {
       <div className="flex gap-3 mt-5">
 
         <button
-          onClick={applyJob}
+          onClick={() => {
+            if (!loadingApply && !applied) applyJob()
+          }}
           disabled={loadingApply || applied}
           className={`flex-1 py-2 rounded text-white 
             ${applied ? "bg-green-500" : "bg-blue-600 hover:bg-blue-700"}
           `}
         >
-          {loadingApply ? "Applying..." : applied ? "Applied" : "Apply"}
+            {loadingApply ? "Applying..." : applied ? "Applied" : "Apply"}
         </button>
-
         <button
           onClick={handleSaveJob}
           disabled={loadingSave || saved}

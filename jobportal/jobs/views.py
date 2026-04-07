@@ -5,16 +5,23 @@ from .serializers import JobSerializer
 from .permissions import IsEmployer
 from .models import SavedJob
 from .serializers import SavedJobSerializer
-
+from rest_framework.views import APIView
+from rest_framework.generics import DestroyAPIView
+from rest_framework.response import Response
+from users.permissions import IsAdminUser
 from users.models import Profile
 from notifications.models import Notification
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
 
+
 class JobListCreateView(generics.ListCreateAPIView):
     serializer_class = JobSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_context(self):
+        return {"request": self.request}
 
     def get_queryset(self):
         user = self.request.user
@@ -32,6 +39,9 @@ class JobListCreateView(generics.ListCreateAPIView):
         elif user.role == "jobseeker":
             # jobs = jobs.filter(status="approved")  # use when admin exists
             jobs = jobs.all()
+
+        elif user.role == "admin":
+            jobs = jobs.all()    
 
         # Search filter
         if search:
@@ -105,16 +115,22 @@ class JobListCreateView(generics.ListCreateAPIView):
         return [permissions.IsAuthenticated()]
 
 
+from rest_framework.exceptions import ValidationError
+
 class SaveJobView(generics.CreateAPIView):
     serializer_class = SavedJobSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
-        job = serializer.validated_data["job"]
+        job = serializer.validated_data.get("job")
+
+        if not job:
+            raise ValidationError({"job": "This field is required"})
+
         user = self.request.user
 
         if SavedJob.objects.filter(user=user, job=job).exists():
-            raise ValidationError("Job already saved")
+            raise ValidationError({"detail": "Job already saved"})
 
         serializer.save(user=user)
 
@@ -123,5 +139,29 @@ class SavedJobsListView(generics.ListAPIView):
     serializer_class = SavedJobSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_serializer_context(self):
+        return {"request": self.request}
+        
+
     def get_queryset(self):
         return SavedJob.objects.filter(user=self.request.user)
+
+class AdminJobStatusUpdateView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request, pk):
+        job = Job.objects.get(pk=pk)
+        status = request.data.get("status")
+
+        if status not in ["approved", "rejected"]:
+            return Response({"error": "Invalid status"}, status=400)
+
+        job.status = status
+        job.save()
+
+        return Response({"message": "Job updated"}) 
+
+class AdminJobDeleteView(DestroyAPIView):
+    queryset = Job.objects.all()
+    serializer_class = JobSerializer
+    permission_classes = [IsAdminUser]               

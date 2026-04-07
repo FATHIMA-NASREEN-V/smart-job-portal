@@ -4,6 +4,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 
+from rest_framework.generics import ListAPIView
+from users.permissions import IsAdminUser
+
 from .models import Application
 from .serializers import ApplicationSerializer
 from .permissions import IsJobSeeker
@@ -14,6 +17,10 @@ from notifications.models import Notification
 
 
 
+class AdminApplicationListView(ListAPIView):
+    queryset = Application.objects.all()
+    serializer_class = ApplicationSerializer
+    permission_classes = [IsAdminUser]
 # 🔹 Jobseeker Apply to Job
 class ApplyToJobView(generics.CreateAPIView):
     queryset = Application.objects.all()

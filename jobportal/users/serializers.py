@@ -22,6 +22,11 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
         return user
 
+    def validate_role(self, value):
+        if value == "admin":
+            raise serializers.ValidationError("Admin cannot register here")
+        return value    
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls,user):
@@ -30,6 +35,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['role'] = user.role
         token['username'] = user.username
 
+
         return token
         
     def validate(self, attrs):
@@ -37,6 +43,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         data["role"] = self.user.role
         data["username"] = self.user.username
+        data['user_id'] = self.user.id
 
         return data
 

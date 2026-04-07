@@ -4,7 +4,7 @@ import Topbar from "../components/common/Topbar"
 import { Outlet } from "react-router-dom"
 
 interface DashboardLayoutProps {
-  role: "employer" | "jobseeker"
+  role: "employer" | "jobseeker" | "admin"
 }
 
 const DashboardLayout = ({ role }: DashboardLayoutProps) => {

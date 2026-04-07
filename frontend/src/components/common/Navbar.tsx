@@ -54,7 +54,9 @@ const Navbar = () => {
             {/* Role-based Dashboard */}
             <Link
               to={
-                user.role === "employer"
+                user.role === "admin"
+                  ? "/admin/dashboard"
+                  : user.role === "employer"
                   ? "/employer/dashboard"
                   : "/jobseeker/dashboard"
               }

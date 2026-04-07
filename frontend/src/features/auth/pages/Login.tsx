@@ -26,6 +26,18 @@ const Login = () => {
     }))
   }
 
+  // ✅ CLEAN ROLE BASED FUNCTION
+  const getDashboardRoute = (role: string) => {
+    switch (role) {
+      case "admin":
+        return "/admin/dashboard"
+      case "employer":
+        return "/employer/dashboard"
+      default:
+        return "/jobseeker/dashboard"
+    }
+  }
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -48,12 +60,8 @@ const Login = () => {
       // ✅ redux
       dispatch(loginSuccess({ user, token }))
 
-      // ✅ redirect
-      if (user.role === "employer") {
-        navigate("/employer/dashboard")
-      } else {
-        navigate("/jobseeker/dashboard")
-      }
+      // ✅ ROLE BASED REDIRECT (FIXED)
+      navigate(getDashboardRoute(user.role))
 
     } catch (err: any) {
       console.error("Login error:", err)

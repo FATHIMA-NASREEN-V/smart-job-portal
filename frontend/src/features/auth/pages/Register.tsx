@@ -144,6 +144,7 @@ const Register = () => {
         >
           <option value="jobseeker">Job Seeker</option>
           <option value="employer">Employer</option>
+          
         </select>
 
         <button

@@ -4,7 +4,7 @@ import type { ReactNode } from "react"
 
 interface Props {
   children: ReactNode
-  role?: "employer" | "jobseeker"
+  role?: "employer" | "jobseeker" | "admin"
 }
 
 const ProtectedRoute = ({ children, role }: Props) => {

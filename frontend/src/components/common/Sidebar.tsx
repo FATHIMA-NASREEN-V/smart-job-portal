@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom"
 
 interface SidebarProps {
-  role: "employer" | "jobseeker"
+  role: "employer" | "jobseeker" | "admin"
   isOpen?: boolean
   toggle?: () => void
 }
@@ -12,6 +12,14 @@ interface MenuItem {
 }
 
 const Sidebar = ({ role, isOpen = true, toggle }: SidebarProps) => {
+
+  const adminMenu: MenuItem[] = [
+    { label: "Dashboard", path: "/admin/dashboard" },
+    { label: "Users", path: "/admin/users" },
+    { label: "Jobs", path: "/admin/jobs" },
+    { label: "Applications", path: "/admin/applications" },
+    { label: "Profile", path: "/admin/profile" },
+  ]
 
   const employerMenu: MenuItem[] = [
     { label: "Dashboard", path: "/employer/dashboard" },
@@ -29,7 +37,13 @@ const Sidebar = ({ role, isOpen = true, toggle }: SidebarProps) => {
     { label: "Profile", path: "/jobseeker/profile" }
   ]
 
-  const menu = role === "employer" ? employerMenu : jobseekerMenu
+  const menus = {
+    employer: employerMenu,
+    jobseeker: jobseekerMenu,
+    admin: adminMenu,
+  }
+
+  const menu = menus[role]
 
   return (
     <aside
@@ -64,14 +78,16 @@ const Sidebar = ({ role, isOpen = true, toggle }: SidebarProps) => {
             to={item.path}
             title={!isOpen ? item.label : ""}
             className={({ isActive }) =>
-              `p-2 rounded transition ${
+              `p-2 rounded transition flex items-center ${
                 isActive
                   ? "bg-blue-600 text-white"
                   : "hover:bg-slate-700 text-gray-300"
               }`
             }
           >
-            {isOpen ? item.label : item.label.charAt(0)}
+            <span>
+              {isOpen ? item.label : item.label.slice(0, 2)}
+            </span>
           </NavLink>
         ))}
 
