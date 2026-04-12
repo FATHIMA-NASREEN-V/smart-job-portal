@@ -97,6 +97,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'jobportal.wsgi.application'
 
+import os
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
+
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases

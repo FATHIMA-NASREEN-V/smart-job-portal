@@ -14,6 +14,79 @@ from rest_framework.response import Response
 from jobs.models import Job
 from applications.models import Application
 
+from rest_framework import status
+from rest_framework.parsers import MultiPartParser, FormParser
+from .resume_parser import extract_text_from_resume, parse_resume_with_claude
+from .models import User, Profile
+from django.contrib.auth.hashers import make_password
+
+class RegisterWithResumeView(APIView):
+    parser_classes = [MultiPartParser, FormParser]
+    permission_classes = []   # public endpoint
+
+    def post(self, request):
+        username   = request.data.get("username")
+        email      = request.data.get("email")
+        password   = request.data.get("password")
+        role       = request.data.get("role", "jobseeker")
+        resume     = request.FILES.get("resume")
+
+        # Basic validation
+        if not all([username, email, password]):
+            return Response(
+                {"error": "username, email and password are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if User.objects.filter(username=username).exists():
+            return Response(
+                {"error": "Username already taken"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Create user
+        user = User.objects.create(
+            username=username,
+            email=email,
+            password=make_password(password),
+            role=role
+        )
+
+        # Parse resume if provided
+        parsed = {}
+        if resume:
+            try:
+                resume_text = extract_text_from_resume(resume)
+                parsed = parse_resume_with_claude(resume_text)
+            except Exception as e:
+                print(f"Resume parsing failed: {e}")
+                parsed = {}
+
+        # Reset file pointer before saving
+        if resume:
+            resume.seek(0)
+
+        # 👇 Use get_or_create to avoid duplicate profile error
+        profile, _ = Profile.objects.get_or_create(user=user)
+        profile.job_title = parsed.get("job_title", "")
+        profile.skills    = parsed.get("skills", "")
+        profile.bio       = parsed.get("bio", "")
+        if resume:
+            profile.resume = resume
+        profile.save()
+
+
+        # Update user name if found
+        if parsed.get("first_name"):
+            user.first_name = parsed["first_name"]
+        if parsed.get("last_name"):
+            user.last_name = parsed["last_name"]
+        user.save()
+
+        return Response({
+            "message": "Registered successfully",
+            "parsed_profile": parsed
+        }, status=status.HTTP_201_CREATED)
 
 
 class RegisterView(generics.CreateAPIView):
